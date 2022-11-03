@@ -12,6 +12,7 @@
 		this.pointerL		= null;
 		this.activePointer	= null;
 		this.selected 		= null;
+		this.selectedPos	= null;
 		this.scale 			= null;
 		this.step 			= 0;
 		this.tipL			= null;
@@ -28,6 +29,7 @@
 			values: 	null,
 			set: 		null,
 			range: 		false,
+			rangeGroup:	false,
 			width: 		null,
 			scale:		true,
 			labels:		true,
@@ -81,11 +83,23 @@
 			this.tipR = createElement('div', this.cls.tip);
 			this.pointerL.appendChild(this.tipL);
 		}
-		this.slider.appendChild(this.selected);
-		this.slider.appendChild(this.scale);
+
+		if (this.conf.range && this.conf.rangeGroup) {
+			// order matters for events
+			this.slider.appendChild(this.scale);
+			this.slider.appendChild(this.selected);
+		} else {
+			this.slider.appendChild(this.selected);
+			this.slider.appendChild(this.scale);
+		}
+
 		this.slider.appendChild(this.pointerL);
 
 		if (this.conf.range) {
+			if (this.conf.rangeGroup) {
+				this.selected.dataset['dir'] = 'both';
+				this.selected.style.cursor = 'grab';
+			}
 			this.pointerR = createElement('div', this.cls.pointer, ['dir', 'right']);
 			if (this.conf.tooltip) this.pointerR.appendChild(this.tipR);
 			this.slider.appendChild(this.pointerR);
@@ -159,10 +173,12 @@
 
 	RS.prototype.addEvents = function () {
 		var pointers = this.slider.querySelectorAll('.' + this.cls.pointer),
-			pieces = this.slider.querySelectorAll('span');
+			pieces = this.slider.querySelectorAll('span'),
+			selected = this.slider.querySelector('.' + this.cls.selected);
 
 		createEvents(document, 'mousemove touchmove', this.move.bind(this));
 		createEvents(document, 'mouseup touchend touchcancel', this.drop.bind(this));
+		createEvents(selected, 'mousedown touchstart', this.drag.bind(this));
 
 		for (var i = 0, iLen = pointers.length; i < iLen; i++)
 			createEvents(pointers[i], 'mousedown touchstart', this.drag.bind(this));
@@ -175,6 +191,13 @@
 		return this.setValues();
 	};
 
+	RS.prototype.getPosition = function (e) {
+		var coordX = e.type === 'touchmove' ? e.touches[0].clientX : e.pageX,
+			index = coordX - this.sliderLeft - (this.pointerWidth / 2);
+		index = Math.round(index / this.step);
+		return index;
+	};
+
 	RS.prototype.drag = function (e) {
 		e.preventDefault();
 
@@ -182,24 +205,33 @@
 
 		var dir = e.target.getAttribute('data-dir');
 		if (dir === 'left') this.activePointer = this.pointerL;
-		if (dir === 'right') this.activePointer = this.pointerR;
+		else if (dir === 'right') this.activePointer = this.pointerR;
+		else if (dir === 'both') {
+			this.activePointer = this.selected;
+			this.selectedPos = this.getPosition(e);
+		}
 
 		return this.slider.classList.add('sliding');
 	};
 
 	RS.prototype.move = function (e) {
 		if (this.activePointer && !this.conf.disabled) {
-			var coordX = e.type === 'touchmove' ? e.touches[0].clientX : e.pageX,
-				index = coordX - this.sliderLeft - (this.pointerWidth / 2);
-
-			index = Math.round(index / this.step);
+			var index = this.getPosition(e);
 
 			if (index <= 0) index = 0;
-			if (index > this.conf.values.length - 1) index = this.conf.values.length - 1;
+			else if (index > this.conf.values.length - 1) index = this.conf.values.length - 1;
 
 			if (this.conf.range) {
 				if (this.activePointer === this.pointerL) this.values.start = index;
-				if (this.activePointer === this.pointerR) this.values.end = index;
+				else if (this.activePointer === this.pointerR) this.values.end = index;
+				else if (this.activePointer === this.selected) {
+					var shift = index - this.selectedPos;
+					if ((this.values.start + shift) <= 0) shift = -this.values.start;
+					if ((this.values.end + shift) > this.conf.values.length - 1) shift = this.conf.values.length - 1 - this.values.end;
+					this.values.start += shift;
+					this.values.end += shift;
+					this.selectedPos += shift;
+				}
 			}
 			else this.values.end = index;
 

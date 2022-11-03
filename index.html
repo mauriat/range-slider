@@ -78,7 +78,7 @@
         }
 
     </style>
-    <link rel="stylesheet" href="css/rSlider.min.css">
+    <link rel="stylesheet" href="src/css/rSlider.css">
 </head>
 <body>
     <div class="top">
@@ -144,6 +144,10 @@
                         <td>Boolean (true or false) to set if the slider is range or single type <strong>(default false)</strong></td>
                     </tr>
                     <tr>
+                        <td class="label">rangeGroup</td>
+                        <td>Boolean (true or false) to set if the slider should move entire range by dragging between range <strong>(default false)</strong></td>
+                    </tr>
+                    <tr>
                         <td class="label">set</td>
                         <td>A flat array of one (single slider) or two (range slider) values to set initial values <strong>(optional)</strong></td>
                     </tr>
@@ -204,7 +208,7 @@
         </div>
     </div>
     
-    <script src="js/rSlider.min.js"></script>
+    <script src="src/js/rSlider.js"></script>
     <script>
         (function () {
             'use strict';
@@ -227,6 +231,7 @@
                     values: {min: 0, max: 100},
                     step: 10,
                     range: true,
+                    rangeGroup: true,
                     set: [10, 40],
                     scale: true,
                     labels: false,
